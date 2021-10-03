@@ -3,9 +3,9 @@ package Chip8
 object Main extends App{
 
   val chip8: Chip8 = new Chip8
+  println(chip8.display)
 
   val myList = List(1,2,3,4,5)
-  for (i <- 0 until myList.length) println(myList(i))
 
   //chip8.loadGame("pong")
   /*
