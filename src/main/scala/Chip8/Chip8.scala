@@ -1,13 +1,34 @@
 package Chip8
 
+import java.io.File
 import scala.collection.mutable
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
+import scala.language.implicitConversions
+import java.io.FileInputStream
 
-class Chip8 {
+class Chip8 extends Thread{
 
-  // TODO: Rework this
-  private val chip8Fontset: Array[Byte] = Array()
+  implicit def intToByte(x: Int) = x.toByte
+
+  private val chip8FontSet: Array[Byte] = Array(
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+  )
 
   private var currentOpcode: Short = 0
 
@@ -40,14 +61,15 @@ class Chip8 {
   private val keys: Array[Byte] = new Array(16)
   private var waitingForKeypress: Boolean = false
   val display: Array[Array[Byte]] = Array.ofDim(displayWidth, displayHeight)
-  
+
   var waitingForKeyPress: Boolean = false
   var drawFlag: Boolean = false
 
 
   private def loadFontset(): Unit = {
-    for (i <- 0 until 80){
-      memory(i) = chip8Fontset(i)
+    println("Loading Font Set")
+    for (i <- 0 until chip8FontSet.length){
+      memory(i) = chip8FontSet(i)
     }
   }
 
@@ -78,7 +100,15 @@ class Chip8 {
 
   def emulateCycle(): Unit = {
     fetchNewOpcode()
+    executeCurrentOpcode()
+    updateTimers()
+  }
 
+  private def fetchNewOpcode(): Unit = {
+    currentOpcode = (memory(programCounter) << 8 | memory(programCounter + 1)).toShort
+  }
+
+  private def executeCurrentOpcode(): Unit = {
     val X = (currentOpcode & 0x0F00) >> 8
     val Y = (currentOpcode & 0x00F0) >> 4
     val N = (currentOpcode & 0x000F).toShort
@@ -303,10 +333,6 @@ class Chip8 {
     }
   }
 
-  private def fetchNewOpcode(): Unit = {
-    currentOpcode = (memory(programCounter) << 8 | memory(programCounter + 1)).toShort
-  }
-
   def waitForKeyPress(): Unit = {
     waitingForKeypress = true
     while (waitingForKeyPress) { /* TODO: Remove this ugly busy wait */ }
@@ -314,10 +340,37 @@ class Chip8 {
   
   def registerKeyPress(keyIndex: Int): Unit = {
     keys(keyIndex) = 1
+    waitingForKeypress = false
   }
 
   def registerKeyRelease(keyIndex: Int): Unit = {
     keys(keyIndex) = 0
+  }
+
+  private def updateTimers(): Unit = {
+
+    if (delayTimer > 0) delayTimer -= 1
+    if (soundTimer > 0) {
+      soundTimer -= 1
+      if (soundTimer == 0)
+        println("BEEP!")
+    }
+
+  }
+
+  def loadGame(name: String): Unit = {
+    val gameFile = new File(getClass.getClassLoader.getResource(name).getPath)
+    val binaryGameData = new FileInputStream(gameFile).readAllBytes()
+    for ((byte: Byte, index: Int) <- binaryGameData.zipWithIndex) {
+      memory(index + 512) = byte
+    }
+  }
+
+  override def run (): Unit = {
+    // TODO: Rework this
+    while (true) {
+      emulateCycle()
+    }
   }
 
   initialize()
