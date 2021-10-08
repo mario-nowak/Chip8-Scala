@@ -10,6 +10,7 @@ import java.io.FileInputStream
 class Chip8 extends Thread{
 
   implicit def intToByte(x: Int) = x.toByte
+  implicit def intToShort(x: Int) = x.toShort
 
   private val chip8FontSet: Array[Byte] = Array(
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -105,7 +106,9 @@ class Chip8 extends Thread{
   }
 
   private def fetchNewOpcode(): Unit = {
-    currentOpcode = (memory(programCounter) << 8 | memory(programCounter + 1)).toShort
+    val firstHalf: Short = memory(programCounter) << 8
+    val secondHalf: Byte = memory(programCounter + 1)
+    currentOpcode = firstHalf | secondHalf
   }
 
   private def executeCurrentOpcode(): Unit = {
@@ -198,7 +201,7 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case _ =>
-                println(s"WARNING - encountered unsupported opcode $currentOpcode !!!")
+                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
             }
           case 0x9000 => // 9XY0 - Skip the next instruction if values of VX and VY are not equal
             if (registerV(X) != registerV(Y))
@@ -273,7 +276,7 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case _ =>
-                println(s"WARNING - encountered unsupported opcode $currentOpcode !!!")
+                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
             }
 
           case 0xF000 =>
@@ -325,12 +328,12 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case _ =>
-                println(s"WARNING - encountered unsupported opcode $currentOpcode !!!")
+                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
             }
           case _ =>
-            println(s"WARNING - encountered unsupported opcode $currentOpcode !!!")
+            throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
         }
-    }
+      }
   }
 
   def waitForKeyPress(): Unit = {
@@ -360,7 +363,7 @@ class Chip8 extends Thread{
 
   def loadGame(name: String): Unit = {
     val gameFile = new File(getClass.getClassLoader.getResource(name).getPath)
-    val binaryGameData = new FileInputStream(gameFile).readAllBytes()
+    val binaryGameData: Array[Byte] = new FileInputStream(gameFile).readAllBytes()
     for ((byte: Byte, index: Int) <- binaryGameData.zipWithIndex) {
       memory(index + 512) = byte
     }
@@ -368,8 +371,11 @@ class Chip8 extends Thread{
 
   override def run (): Unit = {
     // TODO: Rework this
+    var counter: Int = 0
     while (true) {
       emulateCycle()
+      counter += 1
+      println(counter)
     }
   }
 
