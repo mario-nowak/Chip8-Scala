@@ -1,9 +1,9 @@
-package Demo
+package Screen
 
 import java.awt.Color
 import scala.swing.{Graphics2D, Panel}
 
-class Canvas extends Panel{
+class Chip8Screen extends Panel{
 
   override def paintComponent(g: Graphics2D): Unit = {
     // Clear the Canvas

@@ -1,6 +1,7 @@
 package Demo
 
-import Demo.Canvas
+import Screen.Chip8Screen
+
 import scala.swing.BorderPanel.Position.{Center, East, West}
 import scala.swing.event.ButtonClicked
 import scala.swing.{Action, BorderPanel, Button, Dimension, MainFrame, Menu, MenuBar, MenuItem, SimpleSwingApplication}
@@ -14,7 +15,7 @@ object SimpleGUI extends SimpleSwingApplication {
     val button = new Button {
       text = "I am a button!"
     }
-    val canvas = new Canvas {
+    val canvas = new Chip8Screen {
       preferredSize = new Dimension(100, 100)
     }
 

@@ -1,18 +1,15 @@
-package Chip8
+package Core
 
 import java.io.File
 import scala.collection.mutable
 import scala.util.Random
-import scala.util.control.Breaks.{break, breakable}
-import scala.language.implicitConversions
 import java.io.FileInputStream
+import scala.swing.Component
+import scala.swing.event.{Key}
 
-class Chip8 extends Thread{
+class Chip8Core extends Component {
 
-  implicit def intToByte(x: Int) = x.toByte
-  implicit def intToShort(x: Int) = x.toShort
-
-  private val chip8FontSet: Array[Byte] = Array(
+  private val chip8FontSet: Array[Int] = Array(
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -31,27 +28,34 @@ class Chip8 extends Thread{
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
   )
 
-  private var currentOpcode: Short = 0
+  var keyMapping: Array[Key.Value] = Array(
+    Key.Key1, Key.Key2, Key.Key3, Key.Key4,
+    Key.Q, Key.W, Key.E, Key.R,
+    Key.A, Key.S, Key.D, Key.F,
+    Key.Y, Key.X, Key.C, Key.V
+  )
 
-  private val memory: Array[Byte] = new Array(4069)
+  private var currentOpcode: Int = 0
+
+  private val memory: Array[Int] = new Array(4069)
 
   /**
    * Chip-8 has 16 8-bit data registers named V0 to VF.
    */
-  private val registerV: Array[Byte] = new Array(16)
+  private val registerV: Array[Int] = new Array(16)
 
   /**
    * The address register I is 12 bits (here 16).
    */
-  private var registerI: Short = 0
+  private var registerI: Int = 0
 
   private var programCounter: Int = 0
 
-  private var delayTimer: Byte = 0
-  private var soundTimer: Byte = 0
+  private var delayTimer: Int = 0
+  private var soundTimer: Int = 0
 
   private val stack: mutable.Stack[Int] = new mutable.Stack()
-  private var stackPointer: Short = 0
+  private var stackPointer: Int = 0
   private val randomNumberGenerator = new Random()
 
   private val displayWidth: Int = 64
@@ -59,16 +63,15 @@ class Chip8 extends Thread{
   /**
    * The Chip-8 has a black and white screen with a screen size of 64*32.
    */
-  private val keys: Array[Byte] = new Array(16)
+  private val keyRegister: Array[Int] = new Array(16)
   private var waitingForKeypress: Boolean = false
-  val display: Array[Array[Byte]] = Array.ofDim(displayWidth, displayHeight)
+  val display: Array[Array[Int]] = Array.ofDim(displayWidth, displayHeight)
 
   var waitingForKeyPress: Boolean = false
   var drawFlag: Boolean = false
 
 
   private def loadFontset(): Unit = {
-    println("Loading Font Set")
     for (i <- 0 until chip8FontSet.length){
       memory(i) = chip8FontSet(i)
     }
@@ -80,11 +83,6 @@ class Chip8 extends Thread{
     currentOpcode = 0
     registerI = 0
     stackPointer = 0
-
-    // clear display
-    // clear stack
-    // clear registers V0 - VF
-    // clear memory
 
     loadFontset()
   }
@@ -106,17 +104,17 @@ class Chip8 extends Thread{
   }
 
   private def fetchNewOpcode(): Unit = {
-    val firstHalf: Short = memory(programCounter) << 8
-    val secondHalf: Byte = memory(programCounter + 1)
+    val firstHalf: Int = memory(programCounter) << 8
+    val secondHalf: Int = memory(programCounter + 1)
     currentOpcode = firstHalf | secondHalf
   }
 
   private def executeCurrentOpcode(): Unit = {
     val X = (currentOpcode & 0x0F00) >> 8
     val Y = (currentOpcode & 0x00F0) >> 4
-    val N = (currentOpcode & 0x000F).toShort
-    val NN = (currentOpcode & 0x00FF).toShort
-    val NNN = (currentOpcode & 0x0FFF).toShort
+    val N = currentOpcode & 0x000F
+    val NN = currentOpcode & 0x00FF
+    val NNN = currentOpcode & 0x0FFF
     currentOpcode match {
       case 0x00E0 => // 00E0 - Clear the display by setting all pixels to off
         clearDisplay()
@@ -150,11 +148,11 @@ class Chip8 extends Thread{
             incrementProgramCounter()
 
           case 0x6000 => // 6XNN - Load value NN into register VX
-            registerV(X) = (currentOpcode & 0x00FF).toByte
+            registerV(X) = currentOpcode & 0x00FF
             incrementProgramCounter()
 
           case 0x7000 => // 7XNN - Add value NN to the value of register VX
-            registerV(X) = (registerV(X) + NN).toByte
+            registerV(X) = registerV(X) + NN
             incrementProgramCounter()
 
           case 0x8000 =>
@@ -164,44 +162,44 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case 0x8001 => // 8XY1 - Store bitwise OR between values VX and VY in VX
-                registerV(X) = (registerV(X) | registerV(Y)).toByte
+                registerV(X) = registerV(X) | registerV(Y)
                 incrementProgramCounter()
 
               case 0x8002 => // 8XY2 - Store bitwise AND between values VX and VY in VX
-                registerV(X) = (registerV(X) & registerV(Y)).toByte
+                registerV(X) = registerV(X) & registerV(Y)
                 incrementProgramCounter()
 
               case 0x8003 => // 8XY3 - Perform bitwise XOE between values VX and VY in VX
-                registerV(X) = (registerV(X) ^ registerV(Y)).toByte
+                registerV(X) = registerV(X) ^ registerV(Y)
                 incrementProgramCounter()
 
               case 0x8004 => // 8XY4 - Store sum of VY and VX in VX. Put the carry bit in VF
                 registerV(0xF) = if (registerV(X) + registerV(Y) > 0xFF) 1 else 0
-                registerV(X) = (registerV(X) + registerV(Y)).toByte
+                registerV(X) = registerV(X) + registerV(Y)
                 incrementProgramCounter()
 
               case 0x8005 => // 8XY5 - Store subtraction of VX and VY in VX. Put the borrow in VF
                 registerV(0xF) = if (registerV(X) > registerV(Y)) 1 else 0
-                registerV(X) = (registerV(X) - registerV(Y)).toByte
+                registerV(X) = registerV(X) - registerV(Y)
                 incrementProgramCounter()
 
               case 0x8006 => // 8XY6 - Store lest significant bit of VX in VF and shift VX right
-                registerV(0xF) = (registerV(X) & 0x01).toByte
-                registerV(X) = (registerV(X) / 2).toByte
+                registerV(0xF) = registerV(X) & 0x01
+                registerV(X) = registerV(X) / 2
                 incrementProgramCounter()
 
               case 0x8007 => // 8XY7 - Store result of subtraction of VY and VX in VX. Set VF to 1 if there is no borrow, to 0 otherwise.
                 registerV(0xF) = if (registerV(Y) > registerV(X)) 1 else 0
-                registerV(X) = (registerV(Y) - registerV(X)).toByte
+                registerV(X) = registerV(Y) - registerV(X)
                 incrementProgramCounter()
 
               case 0x800E => // 8XYE - Store most significant bit of VX in VF and shift VX left
-                registerV(0xF) = (registerV(X) & 0x80).toByte
-                registerV(X) = (registerV(X) * 2).toByte
+                registerV(0xF) = registerV(X) & 0x80
+                registerV(X) = registerV(X) * 2
                 incrementProgramCounter()
 
               case _ =>
-                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
+                onUnsupportedOpcode()
             }
           case 0x9000 => // 9XY0 - Skip the next instruction if values of VX and VY are not equal
             if (registerV(X) != registerV(Y))
@@ -217,7 +215,7 @@ class Chip8 extends Thread{
 
           case 0xC000 => // CXNN - Store the result of a bitwise AND of VX and a random byte
             val randomByte = randomNumberGenerator.nextInt(256)
-            registerV(X) = (randomByte & NN).toByte
+            registerV(X) = randomByte & NN
             incrementProgramCounter()
 
           case 0xD000 => // DXYN - The draw instruction
@@ -227,38 +225,35 @@ class Chip8 extends Thread{
 
             registerV(0xF) = 0
             // iterate over all N rows of the sprite
-            breakable {
-              for (rowIndex <- 0 until N) {
-                // fetch the current row
-                val spriteRow = memory(registerI + rowIndex)
-                // calculate the y coordinate of the current pixel
-                val currentYCoordinate = (startYCoordinate + rowIndex) % displayHeight
+            for (rowIndex <- 0 until N.min(displayHeight - startYCoordinate)) {
+              // fetch the current row
+              val spriteRow = memory(registerI + rowIndex)
+              // calculate the y coordinate of the current pixel
+              val currentYCoordinate = (startYCoordinate + rowIndex) % displayHeight
 
-                // iterate over all 8 columns of the sprite
-                breakable {
-                  for (columnIndex <- 0 until 8) {
-                    // calculate the x coordinate of the current pixel
-                    val currentXCoordinate = (startXCoordinate + columnIndex) % displayWidth
-                    val currentPixel = display(currentXCoordinate)(currentYCoordinate)
+              // iterate over all 8 columns of the sprite
+              for (columnIndex <- 0 until 8.min(displayWidth - startXCoordinate)) {
+                // calculate the x coordinate of the current pixel
+                val currentXCoordinate = (startXCoordinate + columnIndex) % displayWidth
+                val currentPixel = display(currentXCoordinate)(currentYCoordinate)
 
-                    val pixelInSprite = spriteRow & (0x1 << (7 - columnIndex))
-                    // perform XOR between current color in the display and the bit in the sprite
-                    if (pixelInSprite == 1) {
-                      if (currentPixel == 1) {
-                        display(currentXCoordinate)(currentYCoordinate) = 0
-                        registerV(0xF) = 1
-                      } else {
-                        display(currentXCoordinate)(currentYCoordinate) = 1
-                      }
-                    }
-                    // stop the iteration if we leave the vertical bounds of the screen
-                    if (currentXCoordinate == displayWidth -1) break
-
+                // extract the bit at the current position from the a row of the sprite
+                // TODO: Move this outside of the loop
+                var binaryString = spriteRow.toBinaryString
+                if (binaryString.length < 8) {
+                  val missingLengt = 8 - binaryString.length
+                  binaryString = "0"*missingLengt + binaryString
+                }
+                val pixelInSprite = binaryString.slice(columnIndex, columnIndex+1).toInt
+                // perform XOR between current color in the display and the bit in the sprite
+                if (pixelInSprite == 1) {
+                  if (currentPixel == 1) {
+                    display(currentXCoordinate)(currentYCoordinate) = 0
+                    registerV(0xF) = 1
+                  } else {
+                    display(currentXCoordinate)(currentYCoordinate) = 1
                   }
                 }
-                // stop the iteration if we leave the horizontal bounds of the screen
-                if (currentYCoordinate == displayHeight -1) break
-
               }
             }
             incrementProgramCounter()
@@ -266,17 +261,17 @@ class Chip8 extends Thread{
           case 0xE000 =>
             currentOpcode & 0xF0FF match {
               case 0xE09E => // EX9E - Skip the next instruction if the key with index VX is currently pressed
-                if (keys(registerV(X)) == 1)
+                if (keyRegister(registerV(X)) == 1)
                   incrementProgramCounter()
                 incrementProgramCounter()
 
               case 0xE0A1 => // EXA1 - Skip the next instruction if the key with index VX is currently NOT pressed
-                if (keys(registerV(X)) == 0)
+                if (keyRegister(registerV(X)) == 0)
                   incrementProgramCounter()
                 incrementProgramCounter()
 
               case _ =>
-                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
+                onUnsupportedOpcode()
             }
 
           case 0xF000 =>
@@ -287,6 +282,7 @@ class Chip8 extends Thread{
 
               case 0xF00A => // FX0A - Wait for a key press and then store the value of the key to VX
                 // TODO: wait for keypress
+                print("Waiting for a keypress!!!")
                 // registerV(X) = key
                 incrementProgramCounter()
 
@@ -299,7 +295,7 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case 0xF01E => // FX1E - Store the sum of I and VX in I
-                registerI = (registerI + registerV(X)).toShort
+                registerI = (registerI + registerV(X))
                 incrementProgramCounter()
 
               case 0xF029 => // FX29 - Set the location of the sprite for the digit VX to I
@@ -307,11 +303,12 @@ class Chip8 extends Thread{
                  * Each character has a height of 0x05 bytes. To obtain the starting address of a character, we need
                  * to multiply its value times the offset of 5 rows for the previous characters.
                  */
-                registerI = (registerV(X) * 0x05).toShort
+                registerI = (registerV(X) * 0x05)
+                incrementProgramCounter()
               case 0xF033 => // FX33 - Store the binary decoded decimal VX into three consecutive memory slots I...I+2
-                val hundreds: Byte = (registerV(X) / 100).toByte
-                val tens: Byte = ((registerV(X) - hundreds * 100) / 10).toByte
-                val ones: Byte = (registerV(X) - hundreds * 100 - tens * 10).toByte
+                val hundreds: Int = (registerV(X) / 100)
+                val tens: Int = ((registerV(X) - hundreds * 100) / 10)
+                val ones: Int = (registerV(X) - hundreds * 100 - tens * 10)
                 memory(registerI) = hundreds
                 memory(registerI+1) = tens
                 memory(registerI+2) = ones
@@ -328,26 +325,31 @@ class Chip8 extends Thread{
                 incrementProgramCounter()
 
               case _ =>
-                throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
+                onUnsupportedOpcode()
             }
           case _ =>
-            throw new Exception(s"WARNING - encountered unsupported opcode $currentOpcode !!!") 
+            onUnsupportedOpcode()
         }
       }
   }
 
+  private def onUnsupportedOpcode(): Unit = {
+    throw new Exception(s"WARNING - encountered unsupported opcode ${currentOpcode.toHexString} !!!")
+  }
+
   def waitForKeyPress(): Unit = {
     waitingForKeypress = true
+    println("Reached Waiting")
     while (waitingForKeyPress) { /* TODO: Remove this ugly busy wait */ }
   }
   
   def registerKeyPress(keyIndex: Int): Unit = {
-    keys(keyIndex) = 1
+    keyRegister(keyIndex) = 1
     waitingForKeypress = false
   }
 
   def registerKeyRelease(keyIndex: Int): Unit = {
-    keys(keyIndex) = 0
+    keyRegister(keyIndex) = 0
   }
 
   private def updateTimers(): Unit = {
@@ -365,17 +367,8 @@ class Chip8 extends Thread{
     val gameFile = new File(getClass.getClassLoader.getResource(name).getPath)
     val binaryGameData: Array[Byte] = new FileInputStream(gameFile).readAllBytes()
     for ((byte: Byte, index: Int) <- binaryGameData.zipWithIndex) {
-      memory(index + 512) = byte
-    }
-  }
-
-  override def run (): Unit = {
-    // TODO: Rework this
-    var counter: Int = 0
-    while (true) {
-      emulateCycle()
-      counter += 1
-      println(counter)
+      val unsigendInt = byte.toInt & 0xFF
+      memory(index + 512) = unsigendInt
     }
   }
 
