@@ -368,7 +368,6 @@ class Chip8Core {
   def registerKeyPress(keyIndex: Int): Unit = {
     if (keyRegister(keyIndex) == 0){
       keyRegister(keyIndex) = 1
-      println(s"pressed $keyIndex")
       if (waitingForKeyPress) {
         waitingForKeyPress = false
         lastPressedKey = keyIndex
@@ -377,7 +376,6 @@ class Chip8Core {
   }
 
   def registerKeyRelease(keyIndex: Int): Unit = {
-    println(s"released $keyIndex")
     keyRegister(keyIndex) = 0
   }
 
