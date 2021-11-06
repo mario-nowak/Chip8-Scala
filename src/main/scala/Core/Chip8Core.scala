@@ -60,8 +60,6 @@ class Chip8Core {
   private var lastPressedKey: Int = 0
   val display: Array[Array[Int]] = Array.ofDim(displayWidth, displayHeight)
 
-  var drawFlag: Boolean = false
-
 
   private def loadFontset(): Unit = {
     for (i <- chip8FontSet.indices){
@@ -69,18 +67,50 @@ class Chip8Core {
     }
   }
 
-  private def initialize(): Unit = {
+  def initialize(): Unit = {
     // initialize registers and memory once
     programCounter = 0x200 // Program counter starts at 0x200
     currentOpcode = 0
     registerI = 0
     stackPointer = 0
+    delayTimer = 0
+    soundTimer = 0
+    waitingForKeyPress = false
+    lastPressedKey = 0
+
+    clearMemory()
+    clearRegisterV()
+    clearStack()
+    clearKeyRegister()
+    clearDisplay()
 
     loadFontset()
   }
 
   private def incrementProgramCounter(): Unit = {
     programCounter += 2
+  }
+
+  private def clearMemory(): Unit = {
+    for (i <- memory.indices) {
+      memory(i) = 0
+    }
+  }
+
+  private def clearRegisterV(): Unit = {
+    for (i <- registerV.indices) {
+      registerV(i) = 0
+    }
+  }
+
+  private def clearStack(): Unit = {
+    stack.popAll()
+  }
+
+  private def clearKeyRegister(): Unit = {
+    for (i <- keyRegister.indices) {
+      keyRegister(i) = 0
+    }
   }
 
   private def clearDisplay(): Unit = {
@@ -275,7 +305,6 @@ class Chip8Core {
                 incrementProgramCounter()
 
               case 0xF00A => // FX0A - Wait for a key press and then store the value of the key to VX
-                print("Waiting for a keypress!!!")
                 if (waitingForKeyPress) {
                   registerV(X) = lastPressedKey
                   waitingForKeyPress = false

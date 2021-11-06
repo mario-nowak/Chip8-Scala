@@ -1,9 +1,10 @@
 import Core.Chip8Core
+
 import java.awt.Color
 import java.awt.geom.Rectangle2D
 import javax.swing.Timer
 import scala.swing.event.{Key, KeyPressed, KeyReleased}
-import scala.swing.{Dimension, Graphics2D, MainFrame, Panel, SimpleSwingApplication, Swing}
+import scala.swing.{Action, Dimension, Graphics2D, MainFrame, Menu, MenuBar, MenuItem, Panel, SimpleSwingApplication, Swing}
 
 object Chip8 extends SimpleSwingApplication{
 
@@ -16,6 +17,32 @@ object Chip8 extends SimpleSwingApplication{
     val screenDimensions = new Dimension(baseWidth*scale, baseHeight*scale)
     size = screenDimensions
 
+    val games: Array[String] = Array(
+      "15PUZZLE",
+      "BLINKY",
+      "BLITZ",
+      "BRIX",
+      "CONNECT4",
+      "GUESS",
+      "HIDDEN",
+      "INVADERS",
+      "KALEID",
+      "MAZE",
+      "MERLIN",
+      "MISSILE",
+      "PONG",
+      "PONG2",
+      "PUZZLE",
+      "SYZYGY",
+      "TANK",
+      "TETRIS",
+      "TICTAC",
+      "UFO",
+      "VBRIX",
+      "VERS",
+      "WIPEOFF"
+    )
+
     val core = new Chip8Core
     core.loadGame("PONG")
 
@@ -24,8 +51,20 @@ object Chip8 extends SimpleSwingApplication{
       screen.repaint()
     }))
 
+    menuBar = new MenuBar {
+      val gamesMenu = new Menu("Games")
+      for (game <- games) {
+        gamesMenu.contents += new MenuItem(Action(game) {
+          core.initialize()
+          core.loadGame(game)
+        })
+      }
+      contents += gamesMenu
+    }
+
     val screen = new Panel {
       preferredSize = screenDimensions
+
       focusable = true
       listenTo(keys)
       reactions += {
@@ -93,7 +132,7 @@ object Chip8 extends SimpleSwingApplication{
       }
     }
     contents = screen
-    //centerOnScreen()
+    centerOnScreen()
     clock.start()
 
   }
