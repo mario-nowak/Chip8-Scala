@@ -1,16 +1,9 @@
-import Chip8.reactions
-import Core.Main.chip8
-import Core.{Chip8Core, DrawEvent}
-import Screen.Chip8Screen
-import sun.jvm.hotspot.HelloWorld.e
-
-import java.awt.{Color, Point}
-import java.awt.event.ActionListener
-import java.awt.geom.{Ellipse2D, Rectangle2D}
+import Core.Chip8Core
+import java.awt.Color
+import java.awt.geom.Rectangle2D
 import javax.swing.Timer
-import scala.swing.BorderPanel.Position.Center
 import scala.swing.event.{Key, KeyPressed, KeyReleased}
-import scala.swing.{BorderPanel, Dimension, Graphics2D, MainFrame, SimpleSwingApplication, Swing}
+import scala.swing.{Dimension, Graphics2D, MainFrame, Panel, SimpleSwingApplication, Swing}
 
 object Chip8 extends SimpleSwingApplication{
 
@@ -31,10 +24,9 @@ object Chip8 extends SimpleSwingApplication{
       screen.repaint()
     }))
 
-    val screen = new Chip8Screen {
+    val screen = new Panel {
       preferredSize = screenDimensions
       focusable = true
-      //requestFocus()
       listenTo(keys)
       reactions += {
         case KeyPressed(_, Key.Key1, _, _) => core.registerKeyPress(0)
@@ -98,7 +90,6 @@ object Chip8 extends SimpleSwingApplication{
             }
           }
         }
-
       }
     }
     contents = screen
