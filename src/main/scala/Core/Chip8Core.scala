@@ -225,19 +225,19 @@ class Chip8Core {
               // calculate the y coordinate of the current pixel
               val currentYCoordinate = (startYCoordinate + rowIndex) % displayHeight
 
+              // extract the bit at the current position from the a row of the sprite
+              var binaryString = spriteRow.toBinaryString
+              if (binaryString.length < 8) {
+                val missingLength = 8 - binaryString.length
+                binaryString = "0"*missingLength + binaryString
+              }
+
               // iterate over all 8 columns of the sprite
               for (columnIndex <- 0 until 8.min(displayWidth - startXCoordinate)) {
                 // calculate the x coordinate of the current pixel
                 val currentXCoordinate = (startXCoordinate + columnIndex) % displayWidth
                 val currentPixel = display(currentXCoordinate)(currentYCoordinate)
 
-                // extract the bit at the current position from the a row of the sprite
-                // TODO: Move this outside of the loop
-                var binaryString = spriteRow.toBinaryString
-                if (binaryString.length < 8) {
-                  val missingLength = 8 - binaryString.length
-                  binaryString = "0"*missingLength + binaryString
-                }
                 val pixelInSprite = binaryString.slice(columnIndex, columnIndex+1).toInt
                 // perform XOR between current color in the display and the bit in the sprite
                 if (pixelInSprite == 1) {
