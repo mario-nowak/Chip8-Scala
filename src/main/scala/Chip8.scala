@@ -30,52 +30,52 @@ object Chip8 extends SimpleSwingApplication{
       listenTo(keys)
       reactions += {
         case KeyPressed(_, Key.Key1, _, _) => core.registerKeyPress(0)
-        case KeyReleased(_, Key.Key1, _, _) => core.registerKeyPress(0)
+        case KeyReleased(_, Key.Key1, _, _) => core.registerKeyRelease(0)
 
         case KeyPressed(_, Key.Key2, _, _) => core.registerKeyPress(1)
-        case KeyReleased(_, Key.Key2, _, _) => core.registerKeyPress(1)
+        case KeyReleased(_, Key.Key2, _, _) => core.registerKeyRelease(1)
 
         case KeyPressed(_, Key.Key3, _, _) => core.registerKeyPress(2)
-        case KeyReleased(_, Key.Key3, _, _) => core.registerKeyPress(2)
+        case KeyReleased(_, Key.Key3, _, _) => core.registerKeyRelease(2)
 
         case KeyPressed(_, Key.Key4, _, _) => core.registerKeyPress(3)
-        case KeyReleased(_, Key.Key4, _, _) => core.registerKeyPress(3)
+        case KeyReleased(_, Key.Key4, _, _) => core.registerKeyRelease(3)
 
         case KeyPressed(_, Key.Q, _, _) => core.registerKeyPress(4)
-        case KeyReleased(_, Key.Q, _, _) => core.registerKeyPress(4)
+        case KeyReleased(_, Key.Q, _, _) => core.registerKeyRelease(4)
 
         case KeyPressed(_, Key.W, _, _) => core.registerKeyPress(5)
-        case KeyReleased(_, Key.W, _, _) => core.registerKeyPress(5)
+        case KeyReleased(_, Key.W, _, _) => core.registerKeyRelease(5)
 
         case KeyPressed(_, Key.E, _, _) => core.registerKeyPress(6)
-        case KeyReleased(_, Key.E, _, _) => core.registerKeyPress(6)
+        case KeyReleased(_, Key.E, _, _) => core.registerKeyRelease(6)
 
         case KeyPressed(_, Key.R, _, _) => core.registerKeyPress(7)
-        case KeyReleased(_, Key.R, _, _) => core.registerKeyPress(7)
+        case KeyReleased(_, Key.R, _, _) => core.registerKeyRelease(7)
 
         case KeyPressed(_, Key.A, _, _) => core.registerKeyPress(8)
-        case KeyReleased(_, Key.A, _, _) => core.registerKeyPress(8)
+        case KeyReleased(_, Key.A, _, _) => core.registerKeyRelease(8)
 
         case KeyPressed(_, Key.S, _, _) => core.registerKeyPress(9)
-        case KeyReleased(_, Key.S, _, _) => core.registerKeyPress(9)
+        case KeyReleased(_, Key.S, _, _) => core.registerKeyRelease(9)
 
         case KeyPressed(_, Key.D, _, _) => core.registerKeyPress(10)
-        case KeyReleased(_, Key.D, _, _) => core.registerKeyPress(10)
+        case KeyReleased(_, Key.D, _, _) => core.registerKeyRelease(10)
 
         case KeyPressed(_, Key.F, _, _) => core.registerKeyPress(11)
-        case KeyReleased(_, Key.F, _, _) => core.registerKeyPress(11)
+        case KeyReleased(_, Key.F, _, _) => core.registerKeyRelease(11)
 
         case KeyPressed(_, Key.Y, _, _) => core.registerKeyPress(12)
-        case KeyReleased(_, Key.Y, _, _) => core.registerKeyPress(12)
+        case KeyReleased(_, Key.Y, _, _) => core.registerKeyRelease(12)
 
         case KeyPressed(_, Key.X, _, _) => core.registerKeyPress(13)
-        case KeyReleased(_, Key.X, _, _) => core.registerKeyPress(13)
+        case KeyReleased(_, Key.X, _, _) => core.registerKeyRelease(13)
 
         case KeyPressed(_, Key.C, _, _) => core.registerKeyPress(14)
-        case KeyReleased(_, Key.C, _, _) => core.registerKeyPress(14)
+        case KeyReleased(_, Key.C, _, _) => core.registerKeyRelease(14)
 
         case KeyPressed(_, Key.V, _, _) => core.registerKeyPress(15)
-        case KeyReleased(_, Key.V, _, _) => core.registerKeyPress(15)
+        case KeyReleased(_, Key.V, _, _) => core.registerKeyRelease(15)
       }
 
       override def paint(g: Graphics2D): Unit = {

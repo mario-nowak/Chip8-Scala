@@ -5,7 +5,6 @@ import scala.collection.mutable
 import scala.util.Random
 import java.io.FileInputStream
 import scala.swing.Component
-import scala.swing.event.{Key}
 
 class Chip8Core extends Component {
 
@@ -26,13 +25,6 @@ class Chip8Core extends Component {
     0xE0, 0x90, 0x90, 0x90, 0xE0, // D
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-  )
-
-  var keyMapping: Array[Key.Value] = Array(
-    Key.Key1, Key.Key2, Key.Key3, Key.Key4,
-    Key.Q, Key.W, Key.E, Key.R,
-    Key.A, Key.S, Key.D, Key.F,
-    Key.Y, Key.X, Key.C, Key.V
   )
 
   private var currentOpcode: Int = 0
@@ -64,15 +56,15 @@ class Chip8Core extends Component {
    * The Chip-8 has a black and white screen with a screen size of 64*32.
    */
   private val keyRegister: Array[Int] = new Array(16)
-  private var waitingForKeypress: Boolean = false
+  private var waitingForKeyPress: Boolean = false
+  private var lastPressedKey: Int = 0
   val display: Array[Array[Int]] = Array.ofDim(displayWidth, displayHeight)
 
-  var waitingForKeyPress: Boolean = false
   var drawFlag: Boolean = false
 
 
   private def loadFontset(): Unit = {
-    for (i <- 0 until chip8FontSet.length){
+    for (i <- chip8FontSet.indices){
       memory(i) = chip8FontSet(i)
     }
   }
@@ -133,18 +125,15 @@ class Chip8Core extends Component {
             programCounter = NNN
 
           case 0x3000 => // 3XNN - Skip the next instruction if VX == NN
-            if (registerV(X) == (currentOpcode & 0x00FF))
-              incrementProgramCounter()
+            if (registerV(X) == (currentOpcode & 0x00FF)) incrementProgramCounter()
             incrementProgramCounter()
 
           case 0x4000 => // 4XNN - Skip the next instruction if VX != NN
-            if (registerV(X) != (currentOpcode & 0x00FF))
-              incrementProgramCounter()
+            if (registerV(X) != (currentOpcode & 0x00FF)) incrementProgramCounter()
             incrementProgramCounter()
 
           case 0x5000 => // 5XY0 - Skip next instruction if VX == VY
-            if (registerV(X) == registerV(Y))
-              incrementProgramCounter()
+            if (registerV(X) == registerV(Y)) incrementProgramCounter()
             incrementProgramCounter()
 
           case 0x6000 => // 6XNN - Load value NN into register VX
@@ -152,7 +141,7 @@ class Chip8Core extends Component {
             incrementProgramCounter()
 
           case 0x7000 => // 7XNN - Add value NN to the value of register VX
-            registerV(X) = registerV(X) + NN
+            registerV(X) = (registerV(X) + NN) % 256
             incrementProgramCounter()
 
           case 0x8000 =>
@@ -175,12 +164,14 @@ class Chip8Core extends Component {
 
               case 0x8004 => // 8XY4 - Store sum of VY and VX in VX. Put the carry bit in VF
                 registerV(0xF) = if (registerV(X) + registerV(Y) > 0xFF) 1 else 0
-                registerV(X) = registerV(X) + registerV(Y)
+                registerV(X) = (registerV(X) + registerV(Y)) % 256
                 incrementProgramCounter()
 
               case 0x8005 => // 8XY5 - Store subtraction of VX and VY in VX. Put the borrow in VF
-                registerV(0xF) = if (registerV(X) > registerV(Y)) 1 else 0
-                registerV(X) = registerV(X) - registerV(Y)
+                registerV(0xF) = if (registerV(X) < registerV(Y)) 1 else 0
+                var subtraction = (registerV(X) - registerV(Y)) % 256
+                subtraction = if (subtraction < 0) subtraction + 256 else subtraction
+                registerV(X) = subtraction
                 incrementProgramCounter()
 
               case 0x8006 => // 8XY6 - Store lest significant bit of VX in VF and shift VX right
@@ -189,21 +180,24 @@ class Chip8Core extends Component {
                 incrementProgramCounter()
 
               case 0x8007 => // 8XY7 - Store result of subtraction of VY and VX in VX. Set VF to 1 if there is no borrow, to 0 otherwise.
-                registerV(0xF) = if (registerV(Y) > registerV(X)) 1 else 0
-                registerV(X) = registerV(Y) - registerV(X)
+                registerV(0xF) = if (registerV(Y) < registerV(X)) 1 else 0
+                var subtraction = (registerV(Y) - registerV(X)) % 256
+                subtraction = if (subtraction < 0) subtraction + 256 else subtraction
+                registerV(X) = subtraction
                 incrementProgramCounter()
 
               case 0x800E => // 8XYE - Store most significant bit of VX in VF and shift VX left
                 registerV(0xF) = registerV(X) & 0x80
-                registerV(X) = registerV(X) * 2
+                registerV(X) = (registerV(X) * 2) % 256
                 incrementProgramCounter()
 
               case _ =>
                 onUnsupportedOpcode()
             }
           case 0x9000 => // 9XY0 - Skip the next instruction if values of VX and VY are not equal
-            if (registerV(X) != registerV(Y))
+            if (registerV(X) != registerV(Y)) {
               incrementProgramCounter()
+            }
             incrementProgramCounter()
 
           case 0xA000 => // ANNN - Set the value of I to the address NNN
@@ -241,8 +235,8 @@ class Chip8Core extends Component {
                 // TODO: Move this outside of the loop
                 var binaryString = spriteRow.toBinaryString
                 if (binaryString.length < 8) {
-                  val missingLengt = 8 - binaryString.length
-                  binaryString = "0"*missingLengt + binaryString
+                  val missingLength = 8 - binaryString.length
+                  binaryString = "0"*missingLength + binaryString
                 }
                 val pixelInSprite = binaryString.slice(columnIndex, columnIndex+1).toInt
                 // perform XOR between current color in the display and the bit in the sprite
@@ -281,10 +275,14 @@ class Chip8Core extends Component {
                 incrementProgramCounter()
 
               case 0xF00A => // FX0A - Wait for a key press and then store the value of the key to VX
-                // TODO: wait for keypress
                 print("Waiting for a keypress!!!")
-                // registerV(X) = key
-                incrementProgramCounter()
+                if (waitingForKeyPress) {
+                  registerV(X) = lastPressedKey
+                  waitingForKeyPress = false
+                  incrementProgramCounter()
+                } else {
+                  waitingForKeyPress = true
+                }
 
               case 0xF015 => // FX15 - Load the value of VX into the delay timer
                 delayTimer = registerV(X)
@@ -303,24 +301,25 @@ class Chip8Core extends Component {
                  * Each character has a height of 0x05 bytes. To obtain the starting address of a character, we need
                  * to multiply its value times the offset of 5 rows for the previous characters.
                  */
-                registerI = (registerV(X) * 0x05)
+                registerI = registerV(X) * 0x05
                 incrementProgramCounter()
+
               case 0xF033 => // FX33 - Store the binary decoded decimal VX into three consecutive memory slots I...I+2
-                val hundreds: Int = (registerV(X) / 100)
-                val tens: Int = ((registerV(X) - hundreds * 100) / 10)
-                val ones: Int = (registerV(X) - hundreds * 100 - tens * 10)
+                val hundreds: Int = registerV(X) / 100
+                val tens: Int = (registerV(X) - hundreds * 100) / 10
+                val ones: Int = registerV(X) - hundreds * 100 - tens * 10
                 memory(registerI) = hundreds
                 memory(registerI+1) = tens
                 memory(registerI+2) = ones
                 incrementProgramCounter()
 
               case 0xF055 => // FX55 - Store registers from V0 to VX in the main memory, starting at location I
-                for (registerIndex <- 0 until X)
+                for (registerIndex <- 0 to X)
                   memory(registerI + registerIndex) = registerV(registerIndex)
                 incrementProgramCounter()
 
               case 0xF065 => // FX65 - Load the memory data starting at address I into the registers V0 to VX
-                for (registerIndex <- 0 until X)
+                for (registerIndex <- 0 to X)
                   registerV(registerIndex) = memory(registerI + registerIndex)
                 incrementProgramCounter()
 
@@ -330,45 +329,44 @@ class Chip8Core extends Component {
           case _ =>
             onUnsupportedOpcode()
         }
-      }
+    }
   }
 
   private def onUnsupportedOpcode(): Unit = {
     throw new Exception(s"WARNING - encountered unsupported opcode ${currentOpcode.toHexString} !!!")
   }
-
-  def waitForKeyPress(): Unit = {
-    waitingForKeypress = true
-    println("Reached Waiting")
-    while (waitingForKeyPress) { /* TODO: Remove this ugly busy wait */ }
-  }
   
   def registerKeyPress(keyIndex: Int): Unit = {
-    keyRegister(keyIndex) = 1
-    waitingForKeypress = false
+    if (keyRegister(keyIndex) == 0){
+      keyRegister(keyIndex) = 1
+      println(s"pressed $keyIndex")
+      if (waitingForKeyPress) {
+        waitingForKeyPress = false
+        lastPressedKey = keyIndex
+      }
+    }
   }
 
   def registerKeyRelease(keyIndex: Int): Unit = {
+    println(s"released $keyIndex")
     keyRegister(keyIndex) = 0
   }
 
   private def updateTimers(): Unit = {
-
     if (delayTimer > 0) delayTimer -= 1
     if (soundTimer > 0) {
       soundTimer -= 1
       if (soundTimer == 0)
         println("BEEP!")
     }
-
   }
 
   def loadGame(name: String): Unit = {
     val gameFile = new File(getClass.getClassLoader.getResource(name).getPath)
     val binaryGameData: Array[Byte] = new FileInputStream(gameFile).readAllBytes()
     for ((byte: Byte, index: Int) <- binaryGameData.zipWithIndex) {
-      val unsigendInt = byte.toInt & 0xFF
-      memory(index + 512) = unsigendInt
+      val unsignedInt = byte.toInt & 0xFF
+      memory(index + 512) = unsignedInt
     }
   }
 
