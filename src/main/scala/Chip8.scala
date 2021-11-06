@@ -16,6 +16,7 @@ object Chip8 extends SimpleSwingApplication{
     val scale = 8
     val screenDimensions = new Dimension(baseWidth*scale, baseHeight*scale)
     size = screenDimensions
+    iconImage = toolkit.getImage("src/main/resources/c8.png")
 
     val games: Array[String] = Array(
       "15PUZZLE",
@@ -60,6 +61,8 @@ object Chip8 extends SimpleSwingApplication{
         })
       }
       contents += gamesMenu
+      contents += new MenuItem(Action("Pause") {clock.stop()})
+      contents += new MenuItem(Action("Resume") {clock.start()})
     }
 
     val screen = new Panel {
