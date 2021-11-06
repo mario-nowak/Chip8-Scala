@@ -17,7 +17,7 @@ object Chip8 extends SimpleSwingApplication{
     size = screenDimensions
 
     val core = new Chip8Core
-    core.loadGame("PONG")
+    core.loadGame("BRIX")
 
     val clock = new Timer(1, Swing.ActionListener(e => {
       core.emulateCycle()

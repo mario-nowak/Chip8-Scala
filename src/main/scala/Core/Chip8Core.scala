@@ -168,7 +168,7 @@ class Chip8Core extends Component {
                 incrementProgramCounter()
 
               case 0x8005 => // 8XY5 - Store subtraction of VX and VY in VX. Put the borrow in VF
-                registerV(0xF) = if (registerV(X) < registerV(Y)) 1 else 0
+                registerV(0xF) = if (registerV(X) > registerV(Y)) 1 else 0
                 var subtraction = (registerV(X) - registerV(Y)) % 256
                 subtraction = if (subtraction < 0) subtraction + 256 else subtraction
                 registerV(X) = subtraction
@@ -180,7 +180,7 @@ class Chip8Core extends Component {
                 incrementProgramCounter()
 
               case 0x8007 => // 8XY7 - Store result of subtraction of VY and VX in VX. Set VF to 1 if there is no borrow, to 0 otherwise.
-                registerV(0xF) = if (registerV(Y) < registerV(X)) 1 else 0
+                registerV(0xF) = if (registerV(Y) > registerV(X)) 1 else 0
                 var subtraction = (registerV(Y) - registerV(X)) % 256
                 subtraction = if (subtraction < 0) subtraction + 256 else subtraction
                 registerV(X) = subtraction
