@@ -4,9 +4,9 @@ import java.io.File
 import scala.collection.mutable
 import scala.util.Random
 import java.io.FileInputStream
-import scala.swing.Component
+import java.awt.Toolkit
 
-class Chip8Core extends Component {
+class Chip8Core {
 
   private val chip8FontSet: Array[Int] = Array(
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -356,8 +356,9 @@ class Chip8Core extends Component {
     if (delayTimer > 0) delayTimer -= 1
     if (soundTimer > 0) {
       soundTimer -= 1
-      if (soundTimer == 0)
-        println("BEEP!")
+      if (soundTimer == 0) {
+        Toolkit.getDefaultToolkit.beep()
+      }
     }
   }
 
